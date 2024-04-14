@@ -1,3 +1,5 @@
+using WebApplication1.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -16,29 +18,52 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+var _animals = new List<Animal>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+    new Animal { IdAnimal = 1, Name = "Pusheck", Category = "Cat", Color = "Grey", Weight = 6.1 },
+    new Animal { IdAnimal = 2, Name = "Otamendi", Category = "Dog", Color = "White", Weight = 15.3 },
+    new Animal { IdAnimal = 3, Name = "Dotter", Category = "Hamster", Color = "Brown", Weight = 0.18 },
+    new Animal { IdAnimal = 4, Name = "Toady", Category = "Snake", Color = "White", Weight = 15.3 },
+    new Animal { IdAnimal = 5, Name = "Dillon", Category = "Dog", Color = "White", Weight = 15.3 }
 };
 
-app.MapGet("/weatherforecast", () =>
+app.MapGet("/api/animals", () => Results.Ok(_animals))
+    .WithName("GetAnimals")
+    .WithOpenApi();
+
+app.MapPost("/api/animals", (Animal animal) =>
     {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        return forecast;
+        _animals.Add(animal);
+        return Results.StatusCode(StatusCodes.Status201Created);
     })
-    .WithName("GetWeatherForecast")
+    .WithName("CreateAnimal")
+    .WithOpenApi();
+
+app.MapPut("/api/animals/{id:int}", (int id, Animal animal) =>
+    {
+        var animalToEdit = _animals.FirstOrDefault(a => a.IdAnimal == id);
+        if (animalToEdit == null)
+        {
+            return Results.NotFound($"Animal with id {id} was not found");
+        }
+        _animals.Remove(animalToEdit);
+        _animals.Add(animal);
+        return Results.NoContent();
+    })
+    .WithName("UpdateAnimal")
+    .WithOpenApi();
+
+app.MapDelete("/api/animals/{id:int}", (int id) =>
+    {
+        var animalToDelete = _animals.FirstOrDefault(s => s.IdAnimal == id);
+        if (animalToDelete == null)
+        {
+            return Results.NoContent();
+        }
+        _animals.Remove(animalToDelete);
+        return Results.NoContent();
+    })
+    .WithName("DeleteAnimal")
     .WithOpenApi();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
